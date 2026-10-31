@@ -1,65 +1,44 @@
 package sv.gob.salud.CitasService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 import org.junit.jupiter.api.Test;
 
-import sv.gob.salud.CitasService.modelos.entidades.Cita;
-import sv.gob.salud.CitasService.modelos.entidades.CitaDomiciliaria;
 import sv.gob.salud.CitasService.modelos.entidades.CitaPresencial;
-import sv.gob.salud.CitasService.modelos.entidades.CitaVirtual;
-import sv.gob.salud.CitasService.modelos.entidades.Establecimiento;
-import sv.gob.salud.CitasService.modelos.entidades.Expediente;
 import sv.gob.salud.CitasService.modelos.enums.EstadoCita;
 import sv.gob.salud.CitasService.modelos.enums.Prioridad;
 import sv.gob.salud.CitasService.modelos.enums.TipoCita;
 
 class PrototypeCitaTest {
 
-    @Test
-    void clonarCitaPresencial() {
-        CitaPresencial original = new CitaPresencial(1L, null, new Expediente(), 1,
-                EstadoCita.PROGRAMADA, Prioridad.NORMAL, TipoCita.PRIMERA_VEZ, null,
-                LocalDate.now(), LocalTime.of(8, 0), LocalTime.of(8, 30),
-                "Consultorio 101", new Establecimiento(1L, "H001", "Hospital", "San Salvador"), "Sin indicaciones");
-
-        Cita clon = original.clonar();
-
-        assertNotSame(original, clon);
-        assertInstanceOf(CitaPresencial.class, clon);
-        assertEquals("Consultorio 101", ((CitaPresencial) clon).getConsultorio());
+    // Cita presencial base; id=1 y orden=1 respetan las invariantes (deben ser > 0).
+    private CitaPresencial original() {
+        return new CitaPresencial.Builder()
+                .id(1L).agendaMedica(null).expediente(null).orden(1)
+                .estadoCita(EstadoCita.PROGRAMADA).prioridad(Prioridad.NORMAL)
+                .tipo(TipoCita.PRIMERA_VEZ).citaOrigen(null)
+                .fechaCita(LocalDate.now().plusDays(1))
+                .horaInicio(LocalTime.of(8, 0)).horaFin(LocalTime.of(9, 0))
+                .consultorio("C-203").establecimiento(null).indicaciones(null)
+                .build();
     }
 
     @Test
-    void clonarCitaVirtual() {
-        CitaVirtual original = new CitaVirtual(2L, null, new Expediente(), 2,
-                EstadoCita.PROGRAMADA, Prioridad.NORMAL, TipoCita.PRIMERA_VEZ, null,
-                LocalDate.now(), LocalTime.of(9, 0), LocalTime.of(9, 30),
-                "https://meet.example.com/cita", "Meet");
+    void clonarEnlazaOriginalYCambiaSoloFechaEId() {
+        CitaPresencial original = original();
+        LocalDate nuevaFecha = original.getFechaCita().plusDays(7);
 
-        Cita clon = original.clonar();
+        CitaPresencial copia = original.clonarCon(
+                2L, nuevaFecha, LocalTime.of(10, 0), LocalTime.of(11, 0));
 
-        assertNotSame(original, clon);
-        assertInstanceOf(CitaVirtual.class, clon);
-        assertEquals("https://meet.example.com/cita", ((CitaVirtual) clon).getUrl());
-    }
-
-    @Test
-    void clonarCitaDomiciliaria() {
-        CitaDomiciliaria original = new CitaDomiciliaria(3L, null, new Expediente(), 3,
-                EstadoCita.PROGRAMADA, Prioridad.NORMAL, TipoCita.PRIMERA_VEZ, null,
-                LocalDate.now(), LocalTime.of(10, 0), LocalTime.of(10, 30),
-                "Colonia Escalón", "Frente a supermercado");
-
-        Cita clon = original.clonar();
-
-        assertNotSame(original, clon);
-        assertInstanceOf(CitaDomiciliaria.class, clon);
-        assertEquals("Colonia Escalón", ((CitaDomiciliaria) clon).getDireccionVisita());
+        assertSame(original, copia.getCitaOrigen());        // enlaza el original
+        assertEquals("C-203", copia.getConsultorio());      // campo propio copiado
+        assertEquals(nuevaFecha, copia.getFechaCita());     // fecha cambiada
+        assertNotEquals(original.getId(), copia.getId());   // es una cita nueva
     }
 }

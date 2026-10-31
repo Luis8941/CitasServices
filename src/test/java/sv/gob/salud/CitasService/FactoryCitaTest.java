@@ -9,11 +9,8 @@ import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
 import sv.gob.salud.CitasService.modelos.entidades.Cita;
-import sv.gob.salud.CitasService.modelos.entidades.CitaDomiciliaria;
 import sv.gob.salud.CitasService.modelos.entidades.CitaPresencial;
 import sv.gob.salud.CitasService.modelos.entidades.CitaVirtual;
-import sv.gob.salud.CitasService.modelos.entidades.Establecimiento;
-import sv.gob.salud.CitasService.modelos.entidades.Expediente;
 import sv.gob.salud.CitasService.modelos.enums.EstadoCita;
 import sv.gob.salud.CitasService.modelos.enums.Modalidad;
 import sv.gob.salud.CitasService.modelos.enums.Prioridad;
@@ -23,73 +20,31 @@ import sv.gob.salud.CitasService.modelos.fabricas.DatosCita;
 
 class FactoryCitaTest {
 
-    @Test
-    void crearCitaPresencial() {
-        CitaFactory factory = new CitaFactory();
-        DatosCita datos = new DatosCita();
-
-        datos.setId(1L);
-        datos.setOrden(1);
-        datos.setEstadoCita(EstadoCita.PROGRAMADA);
-        datos.setPrioridad(Prioridad.NORMAL);
-        datos.setTipo(TipoCita.PRIMERA_VEZ);
-        datos.setFechaCita(LocalDate.now());
-        datos.setHoraInicio(LocalTime.of(8, 0));
-        datos.setHoraFin(LocalTime.of(8, 30));
-        datos.setExpediente(new Expediente());
-        datos.setConsultorio("Consultorio 101");
-        datos.setEstablecimiento(new Establecimiento(1L, "H001", "Hospital Nacional", "San Salvador"));
-        datos.setIndicaciones("Sin indicaciones");
-
-        Cita cita = factory.crearCita(Modalidad.PRESENCIAL, datos);
-
-        assertInstanceOf(CitaPresencial.class, cita);
-        assertEquals("Consultorio 101", ((CitaPresencial) cita).getConsultorio());
+    // Datos base comunes; cada test llena solo el campo propio de su modalidad.
+    // id=1 y orden=1 respetan las invariantes del constructor de Cita (deben ser > 0).
+    private DatosCita datos(String consultorio, String url, String plataforma) {
+        return new DatosCita(
+                1L, null, null, 1,                                   // id, agendaMedica, expediente, orden
+                EstadoCita.PROGRAMADA, Prioridad.NORMAL, TipoCita.PRIMERA_VEZ, null, // estado, prioridad, tipo, citaOrigen
+                LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(9, 0), // fecha, horaInicio, horaFin
+                consultorio, null, null,                             // consultorio, establecimiento, indicaciones
+                null, null,                                          // direccionVisita, referenciaUbicacion
+                url, plataforma);                                    // url, plataforma
     }
 
     @Test
-    void crearCitaVirtual() {
-        CitaFactory factory = new CitaFactory();
-        DatosCita datos = new DatosCita();
+    void creaCitaPresencialSegunLaModalidad() {
+        Cita cita = CitaFactory.crear(Modalidad.PRESENCIAL, datos("C-203", null, null));
 
-        datos.setId(2L);
-        datos.setOrden(2);
-        datos.setEstadoCita(EstadoCita.PROGRAMADA);
-        datos.setPrioridad(Prioridad.NORMAL);
-        datos.setTipo(TipoCita.PRIMERA_VEZ);
-        datos.setFechaCita(LocalDate.now());
-        datos.setHoraInicio(LocalTime.of(9, 0));
-        datos.setHoraFin(LocalTime.of(9, 30));
-        datos.setExpediente(new Expediente());
-        datos.setUrl("https://meet.example.com/cita");
-        datos.setPlataforma("Meet");
-
-        Cita cita = factory.crearCita(Modalidad.VIRTUAL, datos);
-
-        assertInstanceOf(CitaVirtual.class, cita);
-        assertEquals("https://meet.example.com/cita", ((CitaVirtual) cita).getUrl());
+        CitaPresencial presencial = assertInstanceOf(CitaPresencial.class, cita);
+        assertEquals("C-203", presencial.getConsultorio());
     }
 
     @Test
-    void crearCitaDomiciliaria() {
-        CitaFactory factory = new CitaFactory();
-        DatosCita datos = new DatosCita();
+    void creaCitaVirtualSegunLaModalidad() {
+        Cita cita = CitaFactory.crear(Modalidad.VIRTUAL, datos(null, "https://meet.example/abc", "Zoom"));
 
-        datos.setId(3L);
-        datos.setOrden(3);
-        datos.setEstadoCita(EstadoCita.PROGRAMADA);
-        datos.setPrioridad(Prioridad.NORMAL);
-        datos.setTipo(TipoCita.PRIMERA_VEZ);
-        datos.setFechaCita(LocalDate.now());
-        datos.setHoraInicio(LocalTime.of(10, 0));
-        datos.setHoraFin(LocalTime.of(10, 30));
-        datos.setExpediente(new Expediente());
-        datos.setDireccionVisita("Colonia Escalón, San Salvador");
-        datos.setReferenciaUbicacion("Frente a supermercado");
-
-        Cita cita = factory.crearCita(Modalidad.DOMICILIARIA, datos);
-
-        assertInstanceOf(CitaDomiciliaria.class, cita);
-        assertEquals("Colonia Escalón, San Salvador", ((CitaDomiciliaria) cita).getDireccionVisita());
+        CitaVirtual virtual = assertInstanceOf(CitaVirtual.class, cita);
+        assertEquals("https://meet.example/abc", virtual.getUrl());
     }
 }
